@@ -21,6 +21,9 @@
 
 #define MAX_VALUE 100
 
+typedef unsigned long long int ulli;
+typedef long double ld;
+
 // Retorna a distância euclidiana entre dois pontos (x, y, z)
 double euclidian(int x1, int y1, int z1, int x2, int y2, int z2) {
     int x = x1 - x2;
@@ -38,11 +41,11 @@ int **createMatrix(int row, int column, int SEED);
 void printMatrix(int **matrix, int row, int column);
 void freeMatrix(int **matrix, int row);
 
-// * TODO: tratar o caso de N n caber na memoria
-// * TODO: tratar a seed nos nós
-// * TODO: Balancear a carga de trabalho entre os nós
-// * TODO: Usar primitivas coletivas do MPI
-// * TODO: Usar parallel/for/tasks/SIMD do OpenMP
+// TODO: tratar o caso de N n caber na memoria
+// TODO: tratar a seed nos nós
+// TODO: Balancear a carga de trabalho entre os nós
+// TODO: Usar primitivas coletivas do MPI
+// TODO: Usar parallel/for/tasks/SIMD do OpenMP
 
 int main(int argc, char *argv[]) {
     if (argc != 4) {
@@ -72,14 +75,22 @@ int main(int argc, char *argv[]) {
     MPI_Comm_size(MPI_COMM_WORLD, &process_number);
     MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
-    // TODO: tratar o caso de N n caber na memória de apenas uma máquina
-    x = createMatrix(N, N, SEED);
-    y = createMatrix(N, N, SEED);
-    z = createMatrix(N, N, SEED);
+    // Executa o processo 0
+    if (myrank == 0) {
+        // TODO: tratar o caso de N n caber na memória de apenas uma máquina
+        x = createMatrix(N, N, SEED);
+        y = createMatrix(N, N, SEED);
+        z = createMatrix(N, N, SEED);
 
 
-    
 
+
+        // printf("Distância de Manhattan mínima: %d (soma min: %d) e máxima: %d (soma max: %d).\n", min_manhattan, sum_min_manhattan, max_manhattan, sum_max_manhattan);
+        // printf("Distância Euclidiana mínima: %.2lf (soma min: %.2lf) e máxima: %.2lf (soma max: %.2lf).\n", min_euclidean, sum_min_euclidean, max_euclidean, sum_max_euclidean);
+  
+    } else { // Executa os demais processos
+
+    }
 
     freeMatrix(x, N);
     freeMatrix(y, N);
