@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
     return EXIT_SUCCESS;
 }
 
-// Cria uma matriz de tamanho N com valores aleatórios
+// Cria uma matriz de tamanho rowXcolumn com valores aleatórios
 int **createMatrix(int row, int column, int SEED) {
     int **matrix = (int *) malloc(row * sizeof(int*));
 
