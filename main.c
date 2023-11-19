@@ -37,9 +37,9 @@ int manhattan(int x1, int y1, int z1, int x2, int y2, int z2) {
     return abs(x1 - x2) + abs(y1 - y2) + abs(z1 - z2);
 }
 
-int **createMatrix(int row, int column, int SEED);
-void printMatrix(int **matrix, int row, int column);
-void freeMatrix(int **matrix, int row);
+int *createMatrix(int row, int column, int SEED);
+void printMatrix(int *matrix, int row, int column);
+void freeMatrix(int *matrix, int row);
 
 // TODO: tratar o caso de N n caber na memoria
 // TODO: tratar a seed nos nós
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    int N, SEED, T, **x, **y, **z;
+    int N, SEED, T, *x, *y, *z;
 
     N = atoi(argv[1]); // Tamanho da matriz
     SEED = atoi(argv[2]); // Semente para gerar os valores aleatórios
@@ -69,6 +69,7 @@ int main(int argc, char *argv[]) {
     omp_set_num_threads(T);
 
     int process_number, myrank;
+    int src = 0, dest, message_tag;
 
     MPI_Status status;
     MPI_Init(&argc, &argv);
@@ -82,19 +83,27 @@ int main(int argc, char *argv[]) {
         y = createMatrix(N, N, SEED);
         z = createMatrix(N, N, SEED);
 
-
+        // Envia as matrizes x, y, z para os demais processos
+        MPI_Bcast(x, N*N, MPI_INT, src, MPI_COMM_WORLD);
+        MPI_Bcast(y, N*N, MPI_INT, src, MPI_COMM_WORLD);
+        MPI_Bcast(z, N*N, MPI_INT, src, MPI_COMM_WORLD);
 
 
         // printf("Distância de Manhattan mínima: %d (soma min: %d) e máxima: %d (soma max: %d).\n", min_manhattan, sum_min_manhattan, max_manhattan, sum_max_manhattan);
         // printf("Distância Euclidiana mínima: %.2lf (soma min: %.2lf) e máxima: %.2lf (soma max: %.2lf).\n", min_euclidean, sum_min_euclidean, max_euclidean, sum_max_euclidean);
   
     } else { // Executa os demais processos
+    
+        // Recebe as matrizes x, y, z do processo 0
+        MPI_Bcast(x, N*N, MPI_INT, src, MPI_COMM_WORLD);
+        MPI_Bcast(y, N*N, MPI_INT, src, MPI_COMM_WORLD);
+        MPI_Bcast(z, N*N, MPI_INT, src, MPI_COMM_WORLD);
 
     }
 
-    freeMatrix(x, N);
-    freeMatrix(y, N);
-    freeMatrix(z, N);
+    free(x);
+    free(y);
+    free(z);
 
     if (MPI_Finalize() != MPI_SUCCESS) {
         printf("Error on MPI_Finalize()\n");
@@ -105,22 +114,21 @@ int main(int argc, char *argv[]) {
 }
 
 // Cria uma matriz de tamanho rowXcolumn com valores aleatórios
-int **createMatrix(int row, int column, int SEED) {
-    int **matrix = (int *) malloc(row * sizeof(int*));
+int *createMatrix(int row, int column, int SEED) {
+    int *matrix = (int *) malloc(row * column * sizeof(int*));
 
-    for (int i = 0; i < row; i++) {
-        matrix[i] = (int *) malloc(column * sizeof(int));
+    for (int i = 0; i < row; i++)
         for (int j = 0; j < column; j++)
-            matrix[i][j] = rand() % MAX_VALUE;
-    }
+            matrix[i*column + j] = rand() % MAX_VALUE;
 
     return matrix;
 }
 
-void printMatrix(int **matrix, int row, int column) {
+void printMatrix(int *matrix, int row, int column) {
     for (int i = 0; i < row; i++) {
         for (int j = 0; j < column; j++)
-            printf("%d ", matrix[i][j]);
+            printf("%d ", matrix[i*column + j]);
+
         printf("\n");
     }
 
@@ -128,9 +136,6 @@ void printMatrix(int **matrix, int row, int column) {
 }
 
 // Libera a memória alocada para a matriz
-void freeMatrix(int **matrix, int row) {
-    for (int i = 0; i < row; i++)
-        free(matrix[i]);
-
+void freeMatrix(int *matrix, int row) {
     free(matrix);
 }
