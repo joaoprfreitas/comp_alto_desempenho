@@ -17,6 +17,7 @@
 #include <omp.h>
 #include <mpi.h>
 #include <math.h>
+#include <float.h>
 #include <limits.h>
 
 #define MAX_VALUE 100
@@ -76,6 +77,11 @@ int main(int argc, char *argv[]) {
     MPI_Comm_size(MPI_COMM_WORLD, &process_number);
     MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
+    int totalMinManhattan = 0, totalMaxManhattan = 0;
+    int minGlobalManhattan = INT_MAX, maxGlobalManhattan = INT_MIN;
+    double totalMinEuclidean = 0.0, totalMaxEuclidean = 0.0;
+    double minGlobalEuclidean = DBL_MAX, maxGlobalEuclidean = DBL_MIN;
+
     // Executa o processo 0
     if (myrank == 0) {
         // TODO: tratar o caso de N n caber na memória de apenas uma máquina
@@ -106,40 +112,67 @@ int main(int argc, char *argv[]) {
 
         // obtém os maximos e minimos do ponto (x[i], y[i], z[i])
         // TODO: terminar o for externo
-        #pragma omp parallel for 
+        #pragma omp parallel for \
+            reduction(min: min_global_manhattan, min_global_euclidean) \
+            reduction(max: max_global_manhattan, max_global_euclidean) \
+            reduction(+: totalMaxEuclidean, totalMaxManhattan, totalMinEuclidean, totalMinManhattan)
         for (int i = start; i < end; i++) {
-            int min_manhattan_local = INT_MAX, max_manhattan_local = INT_MIN;
-            double min_euclidean_local = INT_MAX, max_euclidean_local = INT_MIN;
+            int minManhattanLocal = INT_MAX, maxManhattanLocal = INT_MIN;
+            double minEuclidianLocal = INT_MAX, maxEuclideanLocal = INT_MIN;
 
             // obtém as distâncias de manhattan e euclidiana entre o ponto (x[i], y[i], z[i]) e todos os outros pontos
-            #pragma omp parallel for reduction(min: min_manhattan_local, min_euclidean_local) reduction(max: max_manhattan_local, max_euclidean_local)
+            #pragma omp parallel for reduction(min: minManhattanLocal, minEuclidianLocal) reduction(max: maxManhattanLocal, maxEuclideanLocal)
             for (int j = i + 1; j < N * N; j++) {
                 // manhattan_distance e euclidean_distance são variáveis locais de cada thread
-                int manhattan_distance = manhattan(x[i], y[i], z[i], x[j], y[j], z[j]);
-                double euclidean_distance = euclidian(x[i], y[i], z[i], x[j], y[j], z[j]);
+                int manhattanDistance = manhattan(x[i], y[i], z[i], x[j], y[j], z[j]);
+                double euclideanDistance = euclidian(x[i], y[i], z[i], x[j], y[j], z[j]);
 
                 // atualiza os valores máximos e mínimos
-                if (manhattan_distance < min_manhattan_local) {
-                    min_manhattan_local = manhattan_distance;
+                if (manhattanDistance < minManhattanLocal) {
+                    minManhattanLocal = manhattanDistance;
                 }
 
-                if (manhattan_distance > max_manhattan_local) {
-                    max_manhattan_local = manhattan_distance;
+                if (manhattanDistance > maxManhattanLocal) {
+                    maxManhattanLocal = manhattanDistance;
                 }
 
-                if (euclidean_distance < min_euclidean_local) {
-                    min_euclidean_local = euclidean_distance;
+                if (euclideanDistance < minEuclidianLocal) {
+                    minEuclidianLocal = euclideanDistance;
                 }
 
-                if (euclidean_distance > max_euclidean_local) {
-                    max_euclidean_local = euclidean_distance;
+                if (euclideanDistance > maxEuclideanLocal) {
+                    maxEuclideanLocal = euclideanDistance;
                 }
             } // end for j
+
+            // atualiza os valores máximos e mínimos globais
+            if (minManhattanLocal < minGlobalManhattan) {
+                minGlobalManhattan = minManhattanLocal;
+            }
+
+            if (maxManhattanLocal > maxGlobalManhattan) {
+                maxGlobalManhattan = maxManhattanLocal;
+            }
+
+            if (minEuclidianLocal < minGlobalEuclidean) {
+                minGlobalEuclidean = minEuclidianLocal;
+            }
+
+            if (maxEuclideanLocal > maxGlobalEuclidean) {
+                maxGlobalEuclidean = maxEuclideanLocal;
+            }
+
+            // atualiza a soma dos valores máximos e mínimos
+			if (minManhattanLocal != INT_MAX && minEuclidianLocal != DBL_MAX) {
+				totalMaxManhattan += maxManhattanLocal;
+				totalMaxEuclidean += maxEuclideanLocal;
+				totalMinManhattan += minManhattanLocal;
+				totalMinEuclidean += minEuclidianLocal;
+			}
         } // end for i
         
 
-        // envia os valores máximos e mínimos para o processo 0
-
+        // TODO: atualizar e enviar os valores máximos e mínimos globais para o processo 0
 
 
 
