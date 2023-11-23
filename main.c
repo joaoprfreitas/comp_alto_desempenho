@@ -69,12 +69,12 @@ int main(int argc, char *argv[]) {
     omp_set_num_threads(T); // Define o número de threads
     omp_set_nested(1); // Permite o uso de threads dentro de threads
 
-    int process_number, myrank, src = 0, dest, message_tag;
+    int n_processes, myrank, src = 0, dest, message_tag;
 
     // Inicializa o MPI
     MPI_Status status;
     MPI_Init(&argc, &argv);
-    MPI_Comm_size(MPI_COMM_WORLD, &process_number);
+    MPI_Comm_size(MPI_COMM_WORLD, &n_processes);
     MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
     int totalMinManhattan = 0, totalMaxManhattan = 0;
@@ -84,15 +84,23 @@ int main(int argc, char *argv[]) {
 
     // Executa o processo 0
     if (myrank == 0) {
-        // TODO: tratar o caso de N n caber na memória de apenas uma máquina
         x = createMatrix(N, N, SEED);
         y = createMatrix(N, N, SEED);
         z = createMatrix(N, N, SEED);
+
+        // TODO: tratar o caso de N n caber na memória de apenas uma máquina
+        if (x == NULL || y == NULL || z == NULL) {
+            // TODO
+            printf("Error on malloc()\n");
+            return EXIT_FAILURE;
+        }
 
         // Envia as matrizes x, y, z para os demais processos
         MPI_Bcast(x, N*N, MPI_INT, src, MPI_COMM_WORLD);
         MPI_Bcast(y, N*N, MPI_INT, src, MPI_COMM_WORLD);
         MPI_Bcast(z, N*N, MPI_INT, src, MPI_COMM_WORLD);
+
+        // TODO: o send deve ser bloqueante
 
 
 
@@ -106,6 +114,8 @@ int main(int argc, char *argv[]) {
         MPI_Bcast(x, N*N, MPI_INT, src, MPI_COMM_WORLD);
         MPI_Bcast(y, N*N, MPI_INT, src, MPI_COMM_WORLD);
         MPI_Bcast(z, N*N, MPI_INT, src, MPI_COMM_WORLD);
+
+        // TODO: o receive deve ser bloqueante
 
         // receive inicio e fim do for
         int start, end;
