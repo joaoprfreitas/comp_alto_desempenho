@@ -271,8 +271,6 @@ int main(int argc, char *argv[]) {
         printf("Error on MPI_Finalize(), process: %d\n", myrank);
         return EXIT_FAILURE;
     }
-    
-    printf("CHEGOU AQUI 3\n");
 
     return EXIT_SUCCESS;
 }
