@@ -68,6 +68,8 @@ int main(int argc, char *argv[]) {
     int *y = (int *) malloc(N * N * sizeof(int*));
     int *z = (int *) malloc(N * N * sizeof(int*));
 
+    const int MATRIX_SIZE = N * N;
+
     srand(SEED);
 
     omp_set_num_threads(T); // Define o número de threads
@@ -89,12 +91,16 @@ int main(int argc, char *argv[]) {
     int *manhattanInfos = (int *) malloc(4 * sizeof(int)); // min, max, sum_min, sum_max
     double *euclideanInfos = (double *) malloc(4 * sizeof(double)); // min, max, sum_min, sum_max
 
-    int *receiveBufferManhattan = (int *) malloc((n_processes) * sizeof(int)); // min, max, sum_min, sum_max
-    double *receiveBufferEuclidean = (double *) malloc((n_processes ) * sizeof(double)); // min, max, sum_min, sum_max
-
     int receiveBufferSize = (n_processes) * 4;
 
+    int *receiveBufferManhattan = (int *) malloc((receiveBufferSize) * sizeof(int)); // min, max, sum_min, sum_max
+    double *receiveBufferEuclidean = (double *) malloc((receiveBufferSize) * sizeof(double)); // min, max, sum_min, sum_max
+
     int *startEnd = (int *) malloc(2 * sizeof(int)); // start, end
+
+    double t1, t2;
+
+    t1 = MPI_Wtime();
 
     // Executa o processo 0
     if (myrank == 0) { // TODO: da pra colocar o processo 0 para executar também
@@ -110,33 +116,32 @@ int main(int argc, char *argv[]) {
         }
 
         // Envia as matrizes x, y, z para os demais processos
-        MPI_Bcast(x, N*N, MPI_INT, src, MPI_COMM_WORLD);
-        MPI_Bcast(y, N*N, MPI_INT, src, MPI_COMM_WORLD);
-        MPI_Bcast(z, N*N, MPI_INT, src, MPI_COMM_WORLD);
+        MPI_Bcast(x, MATRIX_SIZE, MPI_INT, src, MPI_COMM_WORLD);
+        MPI_Bcast(y, MATRIX_SIZE, MPI_INT, src, MPI_COMM_WORLD);
+        MPI_Bcast(z, MATRIX_SIZE, MPI_INT, src, MPI_COMM_WORLD);
 
-        // TODO: o send deve ser bloqueante
-        // TODO: lógica de balanceamento de carga
-
-        int chunk = N * N / (n_processes - 1);
+        // Lógica de balanceamento de carga
+        int chunk = MATRIX_SIZE / (n_processes - 1);
         int currentStart = 0, currentEnd = 0;
         for (int i = 1; i < n_processes; i++) {
             // send inicio e fim do for
 
             if (i == n_processes - 1) {
-                currentEnd = N * N;
+                currentEnd = MATRIX_SIZE;
             } else {
                 currentEnd += chunk;
             }
 
             startEnd[0] = currentStart;
             startEnd[1] = currentEnd;
-
+            
+            // TODO: esse send é sempre bloqueante?
             MPI_Send(startEnd, 2, MPI_INT, i, messageTag, MPI_COMM_WORLD);
 
             currentStart = startEnd[1];
         }
 
-        // TODO: receber os dados dos outros processos
+        // Recebe os dados parciais dos outros processos
         MPI_Gather(manhattanInfos, 4, MPI_INT, receiveBufferManhattan, 4, MPI_INT, src, MPI_COMM_WORLD);
         MPI_Gather(euclideanInfos, 4, MPI_DOUBLE, receiveBufferEuclidean, 4, MPI_DOUBLE, src, MPI_COMM_WORLD);
 
@@ -169,9 +174,9 @@ int main(int argc, char *argv[]) {
     } else { // Executa os demais processos
     
         // Recebe as matrizes x, y, z do processo 0
-        MPI_Bcast(x, N*N, MPI_INT, src, MPI_COMM_WORLD);
-        MPI_Bcast(y, N*N, MPI_INT, src, MPI_COMM_WORLD);
-        MPI_Bcast(z, N*N, MPI_INT, src, MPI_COMM_WORLD);
+        MPI_Bcast(x, MATRIX_SIZE, MPI_INT, src, MPI_COMM_WORLD);
+        MPI_Bcast(y, MATRIX_SIZE, MPI_INT, src, MPI_COMM_WORLD);
+        MPI_Bcast(z, MATRIX_SIZE, MPI_INT, src, MPI_COMM_WORLD);
 
         // TODO: o receive deve ser bloqueante
         MPI_Recv(startEnd, 2, MPI_INT, src, messageTag, MPI_COMM_WORLD, &status);
@@ -188,7 +193,7 @@ int main(int argc, char *argv[]) {
 
             // obtém as distâncias de manhattan e euclidiana entre o ponto (x[i], y[i], z[i]) e todos os outros pontos
             #pragma omp parallel for reduction(min: minManhattanLocal, minEuclideanLocal) reduction(max: maxManhattanLocal, maxEuclideanLocal)
-            for (int j = i + 1; j < N * N; j++) {
+            for (int j = i + 1; j < MATRIX_SIZE; j++) {
                 // manhattan_distance e euclidean_distance são variáveis locais de cada thread
                 int manhattanDistance = manhattan(x[i], y[i], z[i], x[j], y[j], z[j]);
                 double euclideanDistance = euclidean(x[i], y[i], z[i], x[j], y[j], z[j]);
@@ -250,6 +255,12 @@ int main(int argc, char *argv[]) {
         MPI_Gather(manhattanInfos, 4, MPI_INT, receiveBufferManhattan, 4, MPI_INT, src, MPI_COMM_WORLD);
         MPI_Gather(euclideanInfos, 4, MPI_DOUBLE, receiveBufferEuclidean, 4, MPI_DOUBLE, src, MPI_COMM_WORLD);
     } // end else
+
+    t2 = MPI_Wtime();
+
+    if (myrank == 0) {
+        printf("Tempo de execução omp+mpi: %lfs\n", t2 - t1);
+    }
 
 
     free(x);
