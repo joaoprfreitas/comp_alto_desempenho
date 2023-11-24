@@ -98,10 +98,6 @@ int main(int argc, char *argv[]) {
 
     int *startEnd = (int *) malloc(2 * sizeof(int)); // start, end
 
-    double t1, t2;
-
-    t1 = MPI_Wtime();
-
     // Executa o processo 0
     if (myrank == 0) { // TODO: da pra colocar o processo 0 para executar também
         populateMatrix(x, N, N);
@@ -256,25 +252,14 @@ int main(int argc, char *argv[]) {
         MPI_Gather(euclideanInfos, 4, MPI_DOUBLE, receiveBufferEuclidean, 4, MPI_DOUBLE, src, MPI_COMM_WORLD);
     } // end else
 
-    t2 = MPI_Wtime();
-
-    if (myrank == 0) {
-        printf("Tempo de execução omp+mpi: %lfs\n", t2 - t1);
-    }
-
-
     free(x);
     free(y);
     free(z);
-
     free(startEnd);
-
     free(manhattanInfos);
     free(euclideanInfos);
-
     free(receiveBufferEuclidean);
     free(receiveBufferManhattan);
-
     fflush(0);
 
     // Encerra o MPI

@@ -10,7 +10,6 @@
 #include <limits.h>
 #include <float.h>
 #include <stdlib.h>
-#include <time.h>
 
 // Ordem das matrizes quadradas. 
 // O valor de N está fixo nesta versão sequencial. 
@@ -61,9 +60,6 @@ int main()
     int max_manhattan_per_point, max_manhattan = 0, sum_max_manhattan = 0;
     double min_euclidean_per_point, min_euclidean = DBL_MAX, sum_min_euclidean = 0.0;
     double max_euclidean_per_point, max_euclidean = 0.0, sum_max_euclidean = 0.0;
-
-	double t1, t2;
-	t1 = clock();
 
     // Calcule as distâncias de Manhattan e Euclidiana e atualize os valores mínimo e máximo
     for (ij = 0; ij < N*N; ij++) 
@@ -127,9 +123,6 @@ int main()
 		//printf("Dist Euclidiean ponto {%d,%d,%d}: min: %.2lf e máx: %.2lf.\n", x[ij], y[ij], z[ij], min_euclidean_per_point, max_euclidean_per_point);  
         
     } // fim for ij
-	t2 = clock();
-
-	printf("Tempo de execução sequencial: %lfs\n", (t2-t1)/CLOCKS_PER_SEC);
 
 	free(x);
 	free(y);
