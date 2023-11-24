@@ -49,6 +49,7 @@ void printMatrix(int *matrix, int row, int column);
 // TODO: Balancear a carga de trabalho entre os nós
 // TODO: Usar primitivas coletivas do MPI
 // TODO: Usar parallel/for/tasks/SIMD do OpenMP
+// TODO: tratar overflow nas somas
 
 int main(int argc, char *argv[]) {
     if (argc != 4) {
