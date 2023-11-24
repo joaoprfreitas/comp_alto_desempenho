@@ -82,6 +82,9 @@ int main(int argc, char *argv[]) {
     double totalMinEuclidean = 0.0, totalMaxEuclidean = 0.0;
     double minGlobalEuclidean = DBL_MAX, maxGlobalEuclidean = DBL_MIN;
 
+    int *manhattanInfos = (int *) malloc(4 * sizeof(int)); // min, max, sum_min, sum_max
+    double *euclideanInfos = (double *) malloc(4 * sizeof(double)); // min, max, sum_min, sum_max
+
     // Executa o processo 0
     if (myrank == 0) {
         x = createMatrix(N, N, SEED);
@@ -101,12 +104,44 @@ int main(int argc, char *argv[]) {
         MPI_Bcast(z, N*N, MPI_INT, src, MPI_COMM_WORLD);
 
         // TODO: o send deve ser bloqueante
+        // TODO: lógica de balanceamento de carga
 
 
 
 
-        // printf("Distância de Manhattan mínima: %d (soma min: %d) e máxima: %d (soma max: %d).\n", min_manhattan, sum_min_manhattan, max_manhattan, sum_max_manhattan);
-        // printf("Distância Euclidiana mínima: %.2lf (soma min: %.2lf) e máxima: %.2lf (soma max: %.2lf).\n", min_euclidean, sum_min_euclidean, max_euclidean, sum_max_euclidean);
+
+
+
+        // TODO: receber os dados dos outros processos
+        MPI_Gather(manhattanInfos, 4, MPI_INT, manhattanInfos, 4, MPI_INT, src, MPI_COMM_WORLD);
+        MPI_Gather(euclideanInfos, 4, MPI_DOUBLE, euclideanInfos, 4, MPI_DOUBLE, src, MPI_COMM_WORLD);
+
+        // TODO: colocar no omp???
+        for (int i = 0; i < teste; i += 4) {
+            if (minGlobalManhattan > manhattanInfos[i]) {
+                minGlobalManhattan = manhattanInfos[i];
+            }
+
+            if (maxGlobalManhattan < manhattanInfos[i + 1]) {
+                maxGlobalManhattan = manhattanInfos[i + 1];
+            }
+
+            if (minGlobalEuclidean > euclideanInfos[i]) {
+                minGlobalEuclidean = euclideanInfos[i];
+            }
+
+            if (maxGlobalEuclidean < euclideanInfos[i + 1]) {
+                maxGlobalEuclidean = euclideanInfos[i + 1];
+            }
+
+            totalMinManhattan += manhattanInfos[i + 2];
+            totalMaxManhattan += manhattanInfos[i + 3];
+            totalMinEuclidean += euclideanInfos[i + 2];
+            totalMaxEuclidean += euclideanInfos[i + 3];
+        }
+
+        printf("Distância de Manhattan mínima: %d (soma min: %d) e máxima: %d (soma max: %d).\n", minGlobalManhattan, totalMinManhattan, maxGlobalManhattan, totalMaxManhattan);
+        printf("Distância Euclidiana mínima: %.2lf (soma min: %.2lf) e máxima: %.2lf (soma max: %.2lf).\n", minGlobalEuclidean, totalMinEuclidean, maxGlobalEuclidean, totalMaxEuclidean);
   
     } else { // Executa os demais processos
     
@@ -183,15 +218,25 @@ int main(int argc, char *argv[]) {
         
 
         // TODO: atualizar e enviar os valores máximos e mínimos globais para o processo 0
+        manhattanInfos[0] = minGlobalManhattan;
+        manhattanInfos[1] = maxGlobalManhattan;
+        manhattanInfos[2] = totalMinManhattan;
+        manhattanInfos[3] = totalMaxManhattan;
 
+        euclideanInfos[0] = minGlobalEuclidean;
+        euclideanInfos[1] = maxGlobalEuclidean;
+        euclideanInfos[2] = totalMinEuclidean;
+        euclideanInfos[3] = totalMaxEuclidean;
 
-
-
+        MPI_Gather(manhattanInfos, 4, MPI_INT, manhattanInfos, 4, MPI_INT, src, MPI_COMM_WORLD);
+        MPI_Gather(euclideanInfos, 4, MPI_DOUBLE, euclideanInfos, 4, MPI_DOUBLE, src, MPI_COMM_WORLD);
     } // end else
 
     free(x);
     free(y);
     free(z);
+    free(manhattanInfos);
+    free(euclideanInfos);
 
     // Encerra o MPI
     if (MPI_Finalize() != MPI_SUCCESS) {
