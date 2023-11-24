@@ -5,10 +5,12 @@
  * Samuel Victorio Bernacci - 12703455
  * 
  * Comandos para compilar:
+ * mpicc main.c -o main -fopenmp -lm -Wall
+ * mpirun --oversubscribe -np 4 ./main N SEED T
  * 
- * 
- * 
- * 
+ * Caso prefira, deixamos um Makefile de teste
+ * basta edita-lo com os valores desejados e executar:
+ * make mpi
  * 
  */
 
@@ -22,6 +24,7 @@
 
 #define MAX_VALUE 100
 
+// TODO: alterar os tipos para esses:
 typedef unsigned long long int ulli;
 typedef long double ld;
 
@@ -137,9 +140,6 @@ int main(int argc, char *argv[]) {
         MPI_Gather(manhattanInfos, 4, MPI_INT, receiveBufferManhattan, 4, MPI_INT, src, MPI_COMM_WORLD);
         MPI_Gather(euclideanInfos, 4, MPI_DOUBLE, receiveBufferEuclidean, 4, MPI_DOUBLE, src, MPI_COMM_WORLD);
 
-        // printf("RECEB Manhattan::: Min local: %d, max local: %d, soma min local: %d, soma max local: %d\n", receiveBufferManhattan[4], receiveBufferManhattan[4 + 1], receiveBufferManhattan[4 + 2], receiveBufferManhattan[4 + 3]);
-        // printf("RECEB Euclidean::: Min local: %.2lf, max local: %.2lf, soma min local: %.2lf, soma max local: %.2lf\n", receiveBufferEuclidean[4], receiveBufferEuclidean[4 + 1], receiveBufferEuclidean[4 + 2], receiveBufferEuclidean[4 + 3]);
-
         // TODO: colocar no omp???
         for (int i = 4; i < receiveBufferSize; i += 4) {
             if (minGlobalManhattan > receiveBufferManhattan[i]) {
@@ -166,7 +166,6 @@ int main(int argc, char *argv[]) {
 
         printf("Distância de Manhattan mínima: %d (soma min: %d) e máxima: %d (soma max: %d).\n", minGlobalManhattan, totalMinManhattan, maxGlobalManhattan, totalMaxManhattan);
         printf("Distância Euclidiana mínima: %.2lf (soma min: %.2lf) e máxima: %.2lf (soma max: %.2lf).\n", minGlobalEuclidean, totalMinEuclidean, maxGlobalEuclidean, totalMaxEuclidean);
-  
     } else { // Executa os demais processos
     
         // Recebe as matrizes x, y, z do processo 0
@@ -176,9 +175,6 @@ int main(int argc, char *argv[]) {
 
         // TODO: o receive deve ser bloqueante
         MPI_Recv(startEnd, 2, MPI_INT, src, messageTag, MPI_COMM_WORLD, &status);
-
-        // receive inicio e fim do for
-        // int start, end;
 
         // obtém os maximos e minimos do ponto (x[i], y[i], z[i])
         // TODO: terminar o for externo
@@ -255,20 +251,28 @@ int main(int argc, char *argv[]) {
         MPI_Gather(euclideanInfos, 4, MPI_DOUBLE, receiveBufferEuclidean, 4, MPI_DOUBLE, src, MPI_COMM_WORLD);
     } // end else
 
+
     free(x);
     free(y);
     free(z);
+
+    free(startEnd);
+
     free(manhattanInfos);
     free(euclideanInfos);
-    free(startEnd);
+
     free(receiveBufferEuclidean);
     free(receiveBufferManhattan);
 
+    fflush(0);
+
     // Encerra o MPI
     if (MPI_Finalize() != MPI_SUCCESS) {
-        printf("Error on MPI_Finalize()\n");
+        printf("Error on MPI_Finalize(), process: %d\n", myrank);
         return EXIT_FAILURE;
     }
+    
+    printf("CHEGOU AQUI 3\n");
 
     return EXIT_SUCCESS;
 }
