@@ -86,10 +86,10 @@ int main(int argc, char *argv[]) {
     int *manhattanInfos = (int *) malloc(4 * sizeof(int)); // min, max, sum_min, sum_max
     double *euclideanInfos = (double *) malloc(4 * sizeof(double)); // min, max, sum_min, sum_max
 
-    int *receiveBufferManhattan = (int *) malloc((n_processes - 1) * sizeof(int)); // min, max, sum_min, sum_max
-    double *receiveBufferEuclidean = (double *) malloc((n_processes - 1) * sizeof(double)); // min, max, sum_min, sum_max
+    int *receiveBufferManhattan = (int *) malloc((n_processes) * sizeof(int)); // min, max, sum_min, sum_max
+    double *receiveBufferEuclidean = (double *) malloc((n_processes ) * sizeof(double)); // min, max, sum_min, sum_max
 
-    int receiveBufferSize = (n_processes - 1) * 4;
+    int receiveBufferSize = (n_processes) * 4;
 
     int *startEnd = (int *) malloc(2 * sizeof(int)); // start, end
 
@@ -137,38 +137,35 @@ int main(int argc, char *argv[]) {
         MPI_Gather(manhattanInfos, 4, MPI_INT, receiveBufferManhattan, 4, MPI_INT, src, MPI_COMM_WORLD);
         MPI_Gather(euclideanInfos, 4, MPI_DOUBLE, receiveBufferEuclidean, 4, MPI_DOUBLE, src, MPI_COMM_WORLD);
 
-        // printf("Infos recebidas pelo processo 0\n");
-        for (int i = 0; i < n_processes - 1; i++) {
-            printf("RECEB Manhattan::: Min local: %d, max local: %d, soma min local: %d, soma max local: %d\n", receiveBufferManhattan[i * 4], receiveBufferManhattan[i * 4 + 1], receiveBufferManhattan[i * 4 + 2], receiveBufferManhattan[i * 4 + 3]);
-            printf("RECEB Euclidean::: Min local: %.2lf, max local: %.2lf, soma min local: %.2lf, soma max local: %.2lf\n", receiveBufferEuclidean[i * 4], receiveBufferEuclidean[i * 4 + 1], receiveBufferEuclidean[i * 4 + 2], receiveBufferEuclidean[i * 4 + 3]);
-        }
+        // printf("RECEB Manhattan::: Min local: %d, max local: %d, soma min local: %d, soma max local: %d\n", receiveBufferManhattan[4], receiveBufferManhattan[4 + 1], receiveBufferManhattan[4 + 2], receiveBufferManhattan[4 + 3]);
+        // printf("RECEB Euclidean::: Min local: %.2lf, max local: %.2lf, soma min local: %.2lf, soma max local: %.2lf\n", receiveBufferEuclidean[4], receiveBufferEuclidean[4 + 1], receiveBufferEuclidean[4 + 2], receiveBufferEuclidean[4 + 3]);
 
         // TODO: colocar no omp???
-        for (int i = 0; i < n_processes - 1; i += 4) {
-            if (minGlobalManhattan > manhattanInfos[i]) {
-                minGlobalManhattan = manhattanInfos[i];
+        for (int i = 4; i < receiveBufferSize; i += 4) {
+            if (minGlobalManhattan > receiveBufferManhattan[i]) {
+                minGlobalManhattan = receiveBufferManhattan[i];
             }
 
-            if (maxGlobalManhattan < manhattanInfos[i + 1]) {
-                maxGlobalManhattan = manhattanInfos[i + 1];
+            if (maxGlobalManhattan < receiveBufferManhattan[i + 1]) {
+                maxGlobalManhattan = receiveBufferManhattan[i + 1];
             }
 
-            if (minGlobalEuclidean > euclideanInfos[i]) {
-                minGlobalEuclidean = euclideanInfos[i];
+            if (minGlobalEuclidean > receiveBufferEuclidean[i]) {
+                minGlobalEuclidean = receiveBufferEuclidean[i];
             }
 
-            if (maxGlobalEuclidean < euclideanInfos[i + 1]) {
-                maxGlobalEuclidean = euclideanInfos[i + 1];
+            if (maxGlobalEuclidean < receiveBufferEuclidean[i + 1]) {
+                maxGlobalEuclidean = receiveBufferEuclidean[i + 1];
             }
 
-            totalMinManhattan += manhattanInfos[i + 2];
-            totalMaxManhattan += manhattanInfos[i + 3];
-            totalMinEuclidean += euclideanInfos[i + 2];
-            totalMaxEuclidean += euclideanInfos[i + 3];
+            totalMinManhattan += receiveBufferManhattan[i + 2];
+            totalMaxManhattan += receiveBufferManhattan[i + 3];
+            totalMinEuclidean += receiveBufferEuclidean[i + 2];
+            totalMaxEuclidean += receiveBufferEuclidean[i + 3];
         }
 
-        // printf("Distância de Manhattan mínima: %d (soma min: %d) e máxima: %d (soma max: %d).\n", minGlobalManhattan, totalMinManhattan, maxGlobalManhattan, totalMaxManhattan);
-        // printf("Distância Euclidiana mínima: %.2lf (soma min: %.2lf) e máxima: %.2lf (soma max: %.2lf).\n", minGlobalEuclidean, totalMinEuclidean, maxGlobalEuclidean, totalMaxEuclidean);
+        printf("Distância de Manhattan mínima: %d (soma min: %d) e máxima: %d (soma max: %d).\n", minGlobalManhattan, totalMinManhattan, maxGlobalManhattan, totalMaxManhattan);
+        printf("Distância Euclidiana mínima: %.2lf (soma min: %.2lf) e máxima: %.2lf (soma max: %.2lf).\n", minGlobalEuclidean, totalMinEuclidean, maxGlobalEuclidean, totalMaxEuclidean);
   
     } else { // Executa os demais processos
     
@@ -253,15 +250,6 @@ int main(int argc, char *argv[]) {
         euclideanInfos[1] = maxGlobalEuclidean;
         euclideanInfos[2] = totalMinEuclidean;
         euclideanInfos[3] = totalMaxEuclidean;
-
-        printf("ENVIO Manhattan %d::: Min local: %d, max local: %d, soma min local: %d, soma max local: %d\n", myrank, minGlobalManhattan, maxGlobalManhattan, totalMinManhattan, totalMaxManhattan);
-        printf("ENVIO Euclidean %d::: Min local: %.2lf, max local: %.2lf, soma min local: %.2lf, soma max local: %.2lf\n", myrank, minGlobalEuclidean, maxGlobalEuclidean, totalMinEuclidean, totalMaxEuclidean);
-        
-        // * ATÉ AQUI TA CERTO
-
-
-
-
 
         MPI_Gather(manhattanInfos, 4, MPI_INT, receiveBufferManhattan, 4, MPI_INT, src, MPI_COMM_WORLD);
         MPI_Gather(euclideanInfos, 4, MPI_DOUBLE, receiveBufferEuclidean, 4, MPI_DOUBLE, src, MPI_COMM_WORLD);
