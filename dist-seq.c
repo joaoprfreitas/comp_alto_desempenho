@@ -14,7 +14,9 @@
 // Ordem das matrizes quadradas. 
 // O valor de N está fixo nesta versão sequencial. 
 // Para a versão paralela, neste e nos demais casos, siga todas as especificações passadas para o trabalho.
-#define N 4 
+#define N 30
+#define SEED 1
+#define MAX_VALUE 100
 
 // Calcula a distância de Manhattan entre dois pontos
 int manhattan_distance(int x1, int y1, int z1, int x2, int y2, int z2) 
@@ -28,14 +30,27 @@ double euclidean_distance(int x1, int y1, int z1, int x2, int y2, int z2)
     return sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2) + pow(z1 - z2, 2));
 }
 
+int *createMatrix(int row, int column) {
+    int *matrix = (int *) malloc(row * column * sizeof(int*));
+
+    for (int i = 0; i < row; i++)
+        for (int j = 0; j < column; j++)
+            matrix[i*column + j] = rand() % MAX_VALUE;
+
+    return matrix;
+}
+
 int main() 
 {
     // Criação das matrizes para as coordenadas X, Y e Z
 	// A maneira de criar as matrizes e inserir os dados nelas foi simplificada nesta versão sequencial. 
 	// Para a versão paralela, neste e nos demais casos, siga todas as especificações passadas para o trabalho.
-	int x[] = {16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1};
-	int y[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
-	int z[] = {1,5,9,13,2,6,10,14,3,7,11,15,4,8,12,16};
+
+	srand(SEED);
+
+	int *x = createMatrix(N, N);
+	int *y = createMatrix(N, N);
+	int *z = createMatrix(N, N);
 
 	int ij, k;
 	int manhattan_dist;
@@ -108,6 +123,10 @@ int main()
 		//printf("Dist Euclidiean ponto {%d,%d,%d}: min: %.2lf e máx: %.2lf.\n", x[ij], y[ij], z[ij], min_euclidean_per_point, max_euclidean_per_point);  
         
     } // fim for ij
+
+	free(x);
+	free(y);
+	free(z);
 
     printf("Distância de Manhattan mínima: %d (soma min: %d) e máxima: %d (soma max: %d).\n", min_manhattan, sum_min_manhattan, max_manhattan, sum_max_manhattan);
     printf("Distância Euclidiana mínima: %.2lf (soma min: %.2lf) e máxima: %.2lf (soma max: %.2lf).\n", min_euclidean, sum_min_euclidean, max_euclidean, sum_max_euclidean);

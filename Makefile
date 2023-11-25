@@ -1,12 +1,12 @@
 all:
-	mpicc main.c -o main -fopenmp -lm -Wall
-	gcc dist-seq-teste.c -o teste -lm
+	mpicc main.c -o par -fopenmp -lm -Wall
+	gcc dist-seq.c -o seq -lm
 
 mpi:
-	mpirun -np 4 ./main 100 1 5
+	mpirun -np 4 ./par 30 1 6
 
 test:
-	./teste
+	./seq
 
 clean:
-	rm main teste
+	rm seq par
