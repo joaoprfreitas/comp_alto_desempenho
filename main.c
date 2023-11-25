@@ -66,9 +66,9 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    int *x = (int *) malloc(N * N * sizeof(int*));
-    int *y = (int *) malloc(N * N * sizeof(int*));
-    int *z = (int *) malloc(N * N * sizeof(int*));
+    int *x = (int *) malloc(N * N * sizeof(int));
+    int *y = (int *) malloc(N * N * sizeof(int));
+    int *z = (int *) malloc(N * N * sizeof(int));
 
     const int MATRIX_SIZE = N * N;
 
