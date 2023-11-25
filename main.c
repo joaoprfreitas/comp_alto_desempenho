@@ -85,6 +85,12 @@ int main(int argc, char *argv[]) {
     MPI_Comm_size(MPI_COMM_WORLD, &n_processes);
     MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
+    int hostLenght;
+    char hostname[MPI_MAX_PROCESSOR_NAME];
+    MPI_Get_processor_name(hostname, &hostLenght);
+
+    printf("Process %d of %d running on %s\n", myrank, n_processes, hostname);
+
     int totalMinManhattan = 0, totalMaxManhattan = 0;
     int minGlobalManhattan = INT_MAX, maxGlobalManhattan = INT_MIN;
     double totalMinEuclidean = 0.0, totalMaxEuclidean = 0.0;
