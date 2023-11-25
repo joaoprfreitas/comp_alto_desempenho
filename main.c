@@ -23,6 +23,7 @@
 #include <limits.h>
 
 #define MAX_VALUE 100
+#define MASTER_PROCESS 0
 
 // TODO: alterar os tipos para esses:
 typedef unsigned long long int ulli;
@@ -100,7 +101,7 @@ int main(int argc, char *argv[]) {
     int *startEnd = (int *) malloc(2 * sizeof(int)); // start, end
 
     // Executa o processo 0
-    if (myrank == 0) {
+    if (myrank == MASTER_PROCESS) {
         populateMatrix(x, N, N);
         populateMatrix(y, N, N);
         populateMatrix(z, N, N);
@@ -215,7 +216,7 @@ int main(int argc, char *argv[]) {
         }
     } // end for i
 
-    if (myrank != 0) {
+    if (myrank != MASTER_PROCESS) {
         manhattanInfos[0] = minGlobalManhattan;
         manhattanInfos[1] = maxGlobalManhattan;
         manhattanInfos[2] = totalMinManhattan;
@@ -241,7 +242,7 @@ int main(int argc, char *argv[]) {
     }
 
 
-    if (myrank == 0) {
+    if (myrank == MASTER_PROCESS) {
         // Recebe os dados parciais dos outros processos
         MPI_Gather(manhattanInfos, 4, MPI_INT, receiveBufferManhattan, 4, MPI_INT, src, MPI_COMM_WORLD);
         MPI_Gather(euclideanInfos, 4, MPI_DOUBLE, receiveBufferEuclidean, 4, MPI_DOUBLE, src, MPI_COMM_WORLD);
