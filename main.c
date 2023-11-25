@@ -90,15 +90,19 @@ int main(int argc, char *argv[]) {
     double totalMinEuclidean = 0.0, totalMaxEuclidean = 0.0;
     double minGlobalEuclidean = DBL_MAX, maxGlobalEuclidean = DBL_MIN;
 
+    // Buffer para armazenar os resultados parciais de cada processo
     int *manhattanInfos = (int *) malloc(4 * sizeof(int)); // min, max, sum_min, sum_max
     double *euclideanInfos = (double *) malloc(4 * sizeof(double)); // min, max, sum_min, sum_max
 
-    int receiveBufferSize = (n_processes) * 4;
+    // Tamanho do buffer para receber os resultados parciais dos processos
+    int receiveBufferSize = (n_processes) * 4; // sao 4 valores por processo: min, max, sum_min, sum_max
 
+    // Buffer para receber os resultados parciais dos processos
     int *receiveBufferManhattan = (int *) malloc((receiveBufferSize) * sizeof(int)); // min, max, sum_min, sum_max
     double *receiveBufferEuclidean = (double *) malloc((receiveBufferSize) * sizeof(double)); // min, max, sum_min, sum_max
 
-    int *startEnd = (int *) malloc(2 * sizeof(int)); // start, end
+    // Buffer para enviar a carga de trabalho para os processos [inicio, fim]
+    int *startEnd = (int *) malloc(2 * sizeof(int));
 
     // Executa o processo 0
     if (myrank == MASTER_PROCESS) {
@@ -118,7 +122,10 @@ int main(int argc, char *argv[]) {
         MPI_Bcast(y, MATRIX_SIZE, MPI_INT, src, MPI_COMM_WORLD);
         MPI_Bcast(z, MATRIX_SIZE, MPI_INT, src, MPI_COMM_WORLD);
 
-        // Lógica de balanceamento de carga
+        // Balanceamento de carga
+        // Divide a matriz em CHUNKS de tamanho igual e envia para os processos
+        // para que cada um execute uma parte
+        // O ultimo processo recebe CHUNK + resto da divisao
         int chunk = MATRIX_SIZE / (n_processes);
         int currentStart = chunk, currentEnd = chunk;
         for (int i = 1; i < n_processes; i++) {
@@ -131,7 +138,6 @@ int main(int argc, char *argv[]) {
             startEnd[0] = currentStart;
             startEnd[1] = currentEnd;
             
-            // TODO: esse send é sempre bloqueante?
             MPI_Send(startEnd, 2, MPI_INT, i, messageTag, MPI_COMM_WORLD);
 
             currentStart = startEnd[1];
@@ -140,17 +146,15 @@ int main(int argc, char *argv[]) {
         // O processo 0 também executa a parte dele, que vai de 0 a chunk
         startEnd[0] = 0;
         startEnd[1] = chunk;
-    } else { // Executa os demais processos
-    
+    } else { // Demais processos
         // Recebe as matrizes x, y, z do processo 0
         MPI_Bcast(x, MATRIX_SIZE, MPI_INT, src, MPI_COMM_WORLD);
         MPI_Bcast(y, MATRIX_SIZE, MPI_INT, src, MPI_COMM_WORLD);
         MPI_Bcast(z, MATRIX_SIZE, MPI_INT, src, MPI_COMM_WORLD);
 
-        // TODO: o receive deve ser bloqueante
+        // Recebe a sua carga de trabalho
         MPI_Recv(startEnd, 2, MPI_INT, src, messageTag, MPI_COMM_WORLD, &status);
-    } // end else
-
+    }
 
     // Todos os processos realizam operacoes em sua carga de trabalho
 
@@ -216,20 +220,8 @@ int main(int argc, char *argv[]) {
         }
     } // end for i
 
-    if (myrank != MASTER_PROCESS) {
-        manhattanInfos[0] = minGlobalManhattan;
-        manhattanInfos[1] = maxGlobalManhattan;
-        manhattanInfos[2] = totalMinManhattan;
-        manhattanInfos[3] = totalMaxManhattan;
-
-        euclideanInfos[0] = minGlobalEuclidean;
-        euclideanInfos[1] = maxGlobalEuclidean;
-        euclideanInfos[2] = totalMinEuclidean;
-        euclideanInfos[3] = totalMaxEuclidean;
-
-        MPI_Gather(manhattanInfos, 4, MPI_INT, receiveBufferManhattan, 4, MPI_INT, src, MPI_COMM_WORLD);
-        MPI_Gather(euclideanInfos, 4, MPI_DOUBLE, receiveBufferEuclidean, 4, MPI_DOUBLE, src, MPI_COMM_WORLD);
-    } else { // Caso seja o processo mestre, não precisa receber os dados dele mesmo
+    if (myrank == MASTER_PROCESS) {
+        // Armazena no buffer os resultados do processo processo mestre, que também executou a parte dele
         receiveBufferManhattan[0] = minGlobalManhattan;
         receiveBufferManhattan[1] = maxGlobalManhattan;
         receiveBufferManhattan[2] = totalMinManhattan;
@@ -239,15 +231,13 @@ int main(int argc, char *argv[]) {
         receiveBufferEuclidean[1] = maxGlobalEuclidean;
         receiveBufferEuclidean[2] = totalMinEuclidean;
         receiveBufferEuclidean[3] = totalMaxEuclidean;
-    }
 
-
-    if (myrank == MASTER_PROCESS) {
         // Recebe os dados parciais dos outros processos
         MPI_Gather(manhattanInfos, 4, MPI_INT, receiveBufferManhattan, 4, MPI_INT, src, MPI_COMM_WORLD);
         MPI_Gather(euclideanInfos, 4, MPI_DOUBLE, receiveBufferEuclidean, 4, MPI_DOUBLE, src, MPI_COMM_WORLD);
 
         // TODO: colocar no omp???
+        // Calcula os valores globais e soma os valores parciais
         for (int i = 4; i < receiveBufferSize; i += 4) {
             if (minGlobalManhattan > receiveBufferManhattan[i]) {
                 minGlobalManhattan = receiveBufferManhattan[i];
@@ -273,6 +263,23 @@ int main(int argc, char *argv[]) {
 
         printf("Distância de Manhattan mínima: %d (soma min: %d) e máxima: %d (soma max: %d).\n", minGlobalManhattan, totalMinManhattan, maxGlobalManhattan, totalMaxManhattan);
         printf("Distância Euclidiana mínima: %.2lf (soma min: %.2lf) e máxima: %.2lf (soma max: %.2lf).\n", minGlobalEuclidean, totalMinEuclidean, maxGlobalEuclidean, totalMaxEuclidean);
+    } else {
+        // Os demais processos enviam seus resultados parciais para o processo mestre
+
+        // Armazena no buffer os resultados do processo
+        manhattanInfos[0] = minGlobalManhattan;
+        manhattanInfos[1] = maxGlobalManhattan;
+        manhattanInfos[2] = totalMinManhattan;
+        manhattanInfos[3] = totalMaxManhattan;
+
+        euclideanInfos[0] = minGlobalEuclidean;
+        euclideanInfos[1] = maxGlobalEuclidean;
+        euclideanInfos[2] = totalMinEuclidean;
+        euclideanInfos[3] = totalMaxEuclidean;
+
+        // Envia os dados parciais para o processo mestre
+        MPI_Gather(manhattanInfos, 4, MPI_INT, receiveBufferManhattan, 4, MPI_INT, src, MPI_COMM_WORLD);
+        MPI_Gather(euclideanInfos, 4, MPI_DOUBLE, receiveBufferEuclidean, 4, MPI_DOUBLE, src, MPI_COMM_WORLD);
     }
 
     free(x);
