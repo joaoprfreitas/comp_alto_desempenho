@@ -14,7 +14,7 @@
 // Ordem das matrizes quadradas. 
 // O valor de N está fixo nesta versão sequencial. 
 // Para a versão paralela, neste e nos demais casos, siga todas as especificações passadas para o trabalho.
-#define N 100
+#define N 10
 #define SEED 1
 #define MAX_VALUE 100
 

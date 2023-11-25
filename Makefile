@@ -1,6 +1,6 @@
 mpi:
 	mpicc main.c -o main -fopenmp -lm -Wall
-	mpirun --oversubscribe -np 4 ./main 100 1 10
+	mpirun --oversubscribe -np 4 ./main 10 1 10
 
 test:
 	gcc dist-seq-teste.c -o teste -lm

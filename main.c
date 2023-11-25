@@ -100,7 +100,7 @@ int main(int argc, char *argv[]) {
     int *startEnd = (int *) malloc(2 * sizeof(int)); // start, end
 
     // Executa o processo 0
-    if (myrank == 0) { // TODO: da pra colocar o processo 0 para executar também
+    if (myrank == 0) {
         populateMatrix(x, N, N);
         populateMatrix(y, N, N);
         populateMatrix(z, N, N);
@@ -118,11 +118,9 @@ int main(int argc, char *argv[]) {
         MPI_Bcast(z, MATRIX_SIZE, MPI_INT, src, MPI_COMM_WORLD);
 
         // Lógica de balanceamento de carga
-        int chunk = MATRIX_SIZE / (n_processes - 1);
-        int currentStart = 0, currentEnd = 0;
+        int chunk = MATRIX_SIZE / (n_processes);
+        int currentStart = chunk, currentEnd = chunk;
         for (int i = 1; i < n_processes; i++) {
-            // send inicio e fim do for
-
             if (i == n_processes - 1) {
                 currentEnd = MATRIX_SIZE;
             } else {
@@ -138,6 +136,112 @@ int main(int argc, char *argv[]) {
             currentStart = startEnd[1];
         }
 
+        // O processo 0 também executa a parte dele, que vai de 0 a chunk
+        startEnd[0] = 0;
+        startEnd[1] = chunk;
+    } else { // Executa os demais processos
+    
+        // Recebe as matrizes x, y, z do processo 0
+        MPI_Bcast(x, MATRIX_SIZE, MPI_INT, src, MPI_COMM_WORLD);
+        MPI_Bcast(y, MATRIX_SIZE, MPI_INT, src, MPI_COMM_WORLD);
+        MPI_Bcast(z, MATRIX_SIZE, MPI_INT, src, MPI_COMM_WORLD);
+
+        // TODO: o receive deve ser bloqueante
+        MPI_Recv(startEnd, 2, MPI_INT, src, messageTag, MPI_COMM_WORLD, &status);
+    } // end else
+
+
+    // Todos os processos realizam operacoes em sua carga de trabalho
+
+    // obtém os maximos e minimos do ponto (x[i], y[i], z[i])
+    // TODO: terminar o for externo
+    // TODO: colocar um schedule?
+    #pragma omp parallel for \
+        reduction(min: minGlobalManhattan, minGlobalEuclidean) \
+        reduction(max: maxGlobalManhattan, maxGlobalEuclidean) \
+        reduction(+: totalMaxEuclidean, totalMaxManhattan, totalMinEuclidean, totalMinManhattan)
+    for (int i = startEnd[0]; i < startEnd[1]; i++) {
+        int minManhattanLocal = INT_MAX, maxManhattanLocal = INT_MIN;
+        double minEuclideanLocal = INT_MAX, maxEuclideanLocal = INT_MIN;
+
+        // obtém as distâncias de manhattan e euclidiana entre o ponto (x[i], y[i], z[i]) e todos os outros pontos
+        #pragma omp parallel for reduction(min: minManhattanLocal, minEuclideanLocal) reduction(max: maxManhattanLocal, maxEuclideanLocal)
+        for (int j = i + 1; j < MATRIX_SIZE; j++) {
+            // manhattan_distance e euclidean_distance são variáveis locais de cada thread
+            int manhattanDistance = manhattan(x[i], y[i], z[i], x[j], y[j], z[j]);
+            double euclideanDistance = euclidean(x[i], y[i], z[i], x[j], y[j], z[j]);
+
+            // atualiza os valores máximos e mínimos
+            if (manhattanDistance < minManhattanLocal) {
+                minManhattanLocal = manhattanDistance;
+            }
+
+            if (manhattanDistance > maxManhattanLocal) {
+                maxManhattanLocal = manhattanDistance;
+            }
+
+            if (euclideanDistance < minEuclideanLocal) {
+                minEuclideanLocal = euclideanDistance;
+            }
+
+            if (euclideanDistance > maxEuclideanLocal) {
+                maxEuclideanLocal = euclideanDistance;
+            }
+        } // end for j
+
+        // atualiza os valores máximos e mínimos globais
+        if (minManhattanLocal < minGlobalManhattan) {
+            minGlobalManhattan = minManhattanLocal;
+        }
+
+        if (maxManhattanLocal > maxGlobalManhattan) {
+            maxGlobalManhattan = maxManhattanLocal;
+        }
+
+        if (minEuclideanLocal < minGlobalEuclidean) {
+            minGlobalEuclidean = minEuclideanLocal;
+        }
+
+        if (maxEuclideanLocal > maxGlobalEuclidean) {
+            maxGlobalEuclidean = maxEuclideanLocal;
+        }
+
+        // atualiza a soma dos valores máximos e mínimos
+        if (minManhattanLocal != INT_MAX && minEuclideanLocal != DBL_MAX) {
+            totalMaxManhattan += maxManhattanLocal;
+            totalMaxEuclidean += maxEuclideanLocal;
+            totalMinManhattan += minManhattanLocal;
+            totalMinEuclidean += minEuclideanLocal;
+        }
+    } // end for i
+
+    if (myrank != 0) {
+        manhattanInfos[0] = minGlobalManhattan;
+        manhattanInfos[1] = maxGlobalManhattan;
+        manhattanInfos[2] = totalMinManhattan;
+        manhattanInfos[3] = totalMaxManhattan;
+
+        euclideanInfos[0] = minGlobalEuclidean;
+        euclideanInfos[1] = maxGlobalEuclidean;
+        euclideanInfos[2] = totalMinEuclidean;
+        euclideanInfos[3] = totalMaxEuclidean;
+
+        MPI_Gather(manhattanInfos, 4, MPI_INT, receiveBufferManhattan, 4, MPI_INT, src, MPI_COMM_WORLD);
+        MPI_Gather(euclideanInfos, 4, MPI_DOUBLE, receiveBufferEuclidean, 4, MPI_DOUBLE, src, MPI_COMM_WORLD);
+    } else { // Caso seja o processo mestre, não precisa receber os dados dele mesmo
+        receiveBufferManhattan[0] = minGlobalManhattan;
+        receiveBufferManhattan[1] = maxGlobalManhattan;
+        receiveBufferManhattan[2] = totalMinManhattan;
+        receiveBufferManhattan[3] = totalMaxManhattan;
+
+        receiveBufferEuclidean[0] = minGlobalEuclidean;
+        receiveBufferEuclidean[1] = maxGlobalEuclidean;
+        receiveBufferEuclidean[2] = totalMinEuclidean;
+        receiveBufferEuclidean[3] = totalMaxEuclidean;
+    }
+
+
+    if (myrank == 0) {
         // Recebe os dados parciais dos outros processos
         MPI_Gather(manhattanInfos, 4, MPI_INT, receiveBufferManhattan, 4, MPI_INT, src, MPI_COMM_WORLD);
         MPI_Gather(euclideanInfos, 4, MPI_DOUBLE, receiveBufferEuclidean, 4, MPI_DOUBLE, src, MPI_COMM_WORLD);
@@ -168,90 +272,7 @@ int main(int argc, char *argv[]) {
 
         printf("Distância de Manhattan mínima: %d (soma min: %d) e máxima: %d (soma max: %d).\n", minGlobalManhattan, totalMinManhattan, maxGlobalManhattan, totalMaxManhattan);
         printf("Distância Euclidiana mínima: %.2lf (soma min: %.2lf) e máxima: %.2lf (soma max: %.2lf).\n", minGlobalEuclidean, totalMinEuclidean, maxGlobalEuclidean, totalMaxEuclidean);
-    } else { // Executa os demais processos
-    
-        // Recebe as matrizes x, y, z do processo 0
-        MPI_Bcast(x, MATRIX_SIZE, MPI_INT, src, MPI_COMM_WORLD);
-        MPI_Bcast(y, MATRIX_SIZE, MPI_INT, src, MPI_COMM_WORLD);
-        MPI_Bcast(z, MATRIX_SIZE, MPI_INT, src, MPI_COMM_WORLD);
-
-        // TODO: o receive deve ser bloqueante
-        MPI_Recv(startEnd, 2, MPI_INT, src, messageTag, MPI_COMM_WORLD, &status);
-
-        // obtém os maximos e minimos do ponto (x[i], y[i], z[i])
-        // TODO: terminar o for externo
-        #pragma omp parallel for \
-            reduction(min: minGlobalManhattan, minGlobalEuclidean) \
-            reduction(max: maxGlobalManhattan, maxGlobalEuclidean) \
-            reduction(+: totalMaxEuclidean, totalMaxManhattan, totalMinEuclidean, totalMinManhattan)
-        for (int i = startEnd[0]; i < startEnd[1]; i++) {
-            int minManhattanLocal = INT_MAX, maxManhattanLocal = INT_MIN;
-            double minEuclideanLocal = INT_MAX, maxEuclideanLocal = INT_MIN;
-
-            // obtém as distâncias de manhattan e euclidiana entre o ponto (x[i], y[i], z[i]) e todos os outros pontos
-            #pragma omp parallel for reduction(min: minManhattanLocal, minEuclideanLocal) reduction(max: maxManhattanLocal, maxEuclideanLocal)
-            for (int j = i + 1; j < MATRIX_SIZE; j++) {
-                // manhattan_distance e euclidean_distance são variáveis locais de cada thread
-                int manhattanDistance = manhattan(x[i], y[i], z[i], x[j], y[j], z[j]);
-                double euclideanDistance = euclidean(x[i], y[i], z[i], x[j], y[j], z[j]);
-
-                // atualiza os valores máximos e mínimos
-                if (manhattanDistance < minManhattanLocal) {
-                    minManhattanLocal = manhattanDistance;
-                }
-
-                if (manhattanDistance > maxManhattanLocal) {
-                    maxManhattanLocal = manhattanDistance;
-                }
-
-                if (euclideanDistance < minEuclideanLocal) {
-                    minEuclideanLocal = euclideanDistance;
-                }
-
-                if (euclideanDistance > maxEuclideanLocal) {
-                    maxEuclideanLocal = euclideanDistance;
-                }
-            } // end for j
-
-            // atualiza os valores máximos e mínimos globais
-            if (minManhattanLocal < minGlobalManhattan) {
-                minGlobalManhattan = minManhattanLocal;
-            }
-
-            if (maxManhattanLocal > maxGlobalManhattan) {
-                maxGlobalManhattan = maxManhattanLocal;
-            }
-
-            if (minEuclideanLocal < minGlobalEuclidean) {
-                minGlobalEuclidean = minEuclideanLocal;
-            }
-
-            if (maxEuclideanLocal > maxGlobalEuclidean) {
-                maxGlobalEuclidean = maxEuclideanLocal;
-            }
-
-            // atualiza a soma dos valores máximos e mínimos
-			if (minManhattanLocal != INT_MAX && minEuclideanLocal != DBL_MAX) {
-				totalMaxManhattan += maxManhattanLocal;
-				totalMaxEuclidean += maxEuclideanLocal;
-				totalMinManhattan += minManhattanLocal;
-				totalMinEuclidean += minEuclideanLocal;
-			}
-        } // end for i
-        
-        manhattanInfos[0] = minGlobalManhattan;
-        manhattanInfos[1] = maxGlobalManhattan;
-        manhattanInfos[2] = totalMinManhattan;
-        manhattanInfos[3] = totalMaxManhattan;
-
-        euclideanInfos[0] = minGlobalEuclidean;
-        euclideanInfos[1] = maxGlobalEuclidean;
-        euclideanInfos[2] = totalMinEuclidean;
-        euclideanInfos[3] = totalMaxEuclidean;
-
-        MPI_Gather(manhattanInfos, 4, MPI_INT, receiveBufferManhattan, 4, MPI_INT, src, MPI_COMM_WORLD);
-        MPI_Gather(euclideanInfos, 4, MPI_DOUBLE, receiveBufferEuclidean, 4, MPI_DOUBLE, src, MPI_COMM_WORLD);
-    } // end else
+    }
 
     free(x);
     free(y);
