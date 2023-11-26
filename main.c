@@ -52,6 +52,7 @@ void printMatrix(int *matrix, int row, int column);
 // // TODO: Usar parallel/for/tasks/SIMD do OpenMP
 // TODO: Usar tasks
 // TODO: tratar overflow nas somas
+// TODO: processos e threads estão com cargas balanceadas?
 
 int main(int argc, char *argv[]) {
     if (argc != 4) {
@@ -134,6 +135,7 @@ int main(int argc, char *argv[]) {
         // para que cada um execute uma parte
         // O ultimo processo recebe CHUNK + resto da divisao
         int chunk = MATRIX_SIZE / (n_processes);
+        
         int currentStart = chunk, currentEnd = chunk;
         for (int i = 1; i < n_processes; i++) {
             if (i == n_processes - 1) {
@@ -177,7 +179,9 @@ int main(int argc, char *argv[]) {
         double minEuclideanLocal = INT_MAX, maxEuclideanLocal = INT_MIN;
 
         // obtém as distâncias de manhattan e euclidiana entre o ponto (x[i], y[i], z[i]) e todos os outros pontos
-        #pragma omp simd reduction(min: minManhattanLocal, minEuclideanLocal) reduction(max: maxManhattanLocal, maxEuclideanLocal)
+        #pragma omp simd \
+            reduction(min: minManhattanLocal, minEuclideanLocal) \
+            reduction(max: maxManhattanLocal, maxEuclideanLocal)
         for (int j = i + 1; j < MATRIX_SIZE; j++) {
             // manhattan_distance e euclidean_distance são variáveis locais de cada thread
             int manhattanDistance = manhattan(x[i], y[i], z[i], x[j], y[j], z[j]);
