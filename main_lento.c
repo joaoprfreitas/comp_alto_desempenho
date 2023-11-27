@@ -145,9 +145,6 @@ int main(int argc, char *argv[]) {
 
     // * DAQUI PRA CIMA TA CERTO
 
-
-
-    
     // TODO: tem q tratar dnv o +1 nesse divisao?
     int *aux = (int*) malloc((NODE_SIZE/n_processes + 1) * sizeof(int)); 
 
@@ -210,19 +207,37 @@ int main(int argc, char *argv[]) {
                 for (int j = comecoDoEnvio; j < final; j += n_processes) {
                     aux[(j - comecodoBloco) / n_processes] = x[j - comecodoBloco];
                     tamanhoBloquinho++;
-                    printf("Bloco k = %d, envia para processo %d, tamBloquinho = %d, j = %d, valor = %d\n", k, processo_atual, tamanhoBloquinho, j, aux[(j - comecodoBloco) / n_processes]);
+                    // for (int z = 0; z < REAL_NODE_SIZE; z++) {
+                    //     printf("%d ", aux[z]);
+                    // }
+                    // printf("\n");
+                    // printf("Bloco k = %d, envia para processo %d, tamBloquinho = %d, j = %d, valor = %d\n", k, processo_atual, tamanhoBloquinho, j, aux[(j - comecodoBloco) / n_processes]);
                 }
 
                 comecoDoEnvio++;
                 contagemDeProcessos++;
                 
                 if (processo_atual != 0) {
-                    // printf("Tamanho do bloquinho %d enviado para o processo %d\n", tamanhoBloquinho, processo_atual);
-                    MPI_Send(aux, tamanhoBloquinho, MPI_INT, processo_atual, messageTag, MPI_COMM_WORLD); 
-                    // printf("Sou o processo %d "); 
+                    // printf("Envia para Processo %d - Tam Bloquinho %d - Aux: ", tamanhoBloquinho, processo_atual);
+                    // for (int i = 0; i < REAL_NODE_SIZE; i++) {
+                    //     printf("%d ", aux[i]);
+                    // }
+                    // printf("\n");
+                    
+                    printf("Enviando para processo %d: ", processo_atual);
+                    for (int z = 0; z < tamanhoBloquinho; z++) {
+                        printf("%d ", aux[z]);
+                    }
+                    printf("\n");
+
+                    // printf("tam bloq enviado %d para o processo %d\n", tamanhoBloquinho, processo_atual);
+
+                    MPI_Send(&tamanhoBloquinho, 1, MPI_INT, processo_atual, messageTag, MPI_COMM_WORLD);
+                    messageTag++;
+                    MPI_Send(aux, tamanhoBloquinho, MPI_INT, processo_atual, messageTag, MPI_COMM_WORLD);
+                    messageTag--;
                     if (processo_atual == n_processes-1) {
-                        messageTag++;
-                        //printf("Tag msg enviada: %d para o processo %d\n", messageTag, processo_atual);
+                        messageTag+=2;
                     }        
                 } else {
                     // TODO
@@ -230,11 +245,9 @@ int main(int argc, char *argv[]) {
                 
                 processo_atual++;
                 processo_atual %= n_processes;
-                
             }
 
             comecodoBloco = final;
-//            messageTag++;
         }
         
         
@@ -285,24 +298,68 @@ int main(int argc, char *argv[]) {
         // TODO: o tamanho nodesize no receive ta certo?
         int mensageTag = 0;
         // int tamBlocoRecebido = getBlockSize(myrank, REAL_NODE_SIZE/n_processes, REAL_NODE_SIZE % n_processes);
-        int tamBlocoRecebido = getTamanhoBloquinho(myrank, n_processes, REAL_NODE_SIZE);
+        // int tamBlocoRecebido = getTamanhoBloquinho(myrank, n_processes, REAL_NODE_SIZE);
+       
+
         // printf("Myrank: %d Tamanho bloquinho: %d, RealNodeSize = %d\n", myrank, tamBlocoRecebido, REAL_NODE_SIZE);
 
-        int posicao = 0;
-        for (int i = 0; i < n_processes; i++) {
-            if (tamBlocoRecebido == 1) {
-                int valor = -1;
-                MPI_Recv(&valor, 1, MPI_INT, MASTER_PROCESS, mensageTag++, MPI_COMM_WORLD, &status);
 
-                if (valor != -1) {
-                    x[posicao++] = valor;
-                    // printf("Valor recebido: %d\n", valor);
-                }
-            } else {
-                MPI_Recv(x + posicao, tamBlocoRecebido, MPI_INT, MASTER_PROCESS, mensageTag++, MPI_COMM_WORLD, &status);
-                posicao += tamBlocoRecebido;
-            }
+        int pos = 0;
+        for (int i = 0; i < n_processes; i++) {
+            int tamBloquinho = 0;
+            MPI_Recv(&tamBloquinho, 1, MPI_INT, MASTER_PROCESS, mensageTag++, MPI_COMM_WORLD, &status);
+            
+
+            printf("Tam bloquinho %d recebido no rank %d\n", tamBloquinho, myrank);
+            MPI_Recv(aux + pos, tamBloquinho, MPI_INT, MASTER_PROCESS, mensageTag++, MPI_COMM_WORLD, &status);
+            
+            pos += tamBloquinho;
         }
+
+        for (int j = 0; j < REAL_NODE_SIZE; j++) {
+            printf("%d ", aux[j]);
+        }
+        printf("\n");
+
+        // int pos = 0;
+        // for (int i = 0; i < n_processes; i++) {
+        //     int tamBloquinho = 0;
+        //     MPI_Recv(&tamBloquinho, 1, MPI_INT, MASTER_PROCESS, mensageTag++, MPI_COMM_WORLD, &status);
+        //     printf("Tam bloquinho %d recebido no rank %d\n", tamBloquinho, myrank);
+        //     int *teste = (int*) malloc(tamBloquinho * sizeof(int));
+            
+        //     for (int z = 0; z < tamBloquinho; z++) {
+        //         teste[z] = -1;
+        //     }
+
+        //     // printf("Tamanho bloquinho: %d\n", tamBloquinho);
+        //     // MPI_Recv(aux + pos, tamBloquinho, MPI_INT, MASTER_PROCESS, mensageTag++, MPI_COMM_WORLD, &status);
+        //     MPI_Recv(teste, tamBloquinho, MPI_INT, MASTER_PROCESS, mensageTag++, MPI_COMM_WORLD, &status);
+            
+        //     // printf("Processo %d recebeu: ", myrank);
+        //     for (int j = 0; j < tamBloquinho; j++) {
+        //         printf("%d ", teste[j]);
+        //     }
+        //     printf("\n");
+        //     // pos += tamBloquinho;
+        //     free(teste);
+        // }
+
+        // int posicao = 0;
+        // for (int i = 0; i < n_processes; i++) {
+        //     if (tamBlocoRecebido == 1) {
+        //         int valor = -1;
+        //         MPI_Recv(&valor, 1, MPI_INT, MASTER_PROCESS, mensageTag++, MPI_COMM_WORLD, &status);
+
+        //         if (valor != -1) {
+        //             x[posicao++] = valor;
+        //             // printf("Valor recebido: %d\n", valor);
+        //         }
+        //     } else {
+        //         MPI_Recv(x + posicao, tamBlocoRecebido, MPI_INT, MASTER_PROCESS, mensageTag++, MPI_COMM_WORLD, &status);
+        //         posicao += tamBlocoRecebido;
+        //     }
+        // }
 
         // for (int i = 0; i < n_processes; i++) {
         //     if (myrank == 1) {

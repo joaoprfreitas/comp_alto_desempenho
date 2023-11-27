@@ -14,8 +14,6 @@
 // Ordem das matrizes quadradas. 
 // O valor de N está fixo nesta versão sequencial. 
 // Para a versão paralela, neste e nos demais casos, siga todas as especificações passadas para o trabalho.
-#define N 30
-#define SEED 1
 #define MAX_VALUE 100
 
 // Calcula a distância de Manhattan entre dois pontos
@@ -40,11 +38,23 @@ int *createMatrix(int row, int column) {
     return matrix;
 }
 
-int main() 
+int main(int argc, char *argv[]) 
 {
     // Criação das matrizes para as coordenadas X, Y e Z
 	// A maneira de criar as matrizes e inserir os dados nelas foi simplificada nesta versão sequencial. 
 	// Para a versão paralela, neste e nos demais casos, siga todas as especificações passadas para o trabalho.
+
+	if (argc != 3) {
+        printf("Usage: %s <N> <SEED>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+    int N = atoi(argv[1]); // Tamanho da matriz
+    int SEED = atoi(argv[2]); // Semente para gerar os valores aleatórios
+
+    if (N <= 0 || SEED <= 0) {
+        printf("Invalid arguments: N and SEED must be positive\n");
+        return EXIT_FAILURE;
+    }
 
 	srand(SEED);
 

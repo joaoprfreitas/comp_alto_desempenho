@@ -1,0 +1,43 @@
+** N = 10
+
+real	0m0.011s
+real	0m0.009s
+real	0m0.008s
+real	0m0.008s
+real	0m0.008s
+
+Distância de Manhattan mínima: 8 (soma min: 2829) e máxima: 256 (soma max: 17515).
+Distância Euclidiana mínima: 5.39 (soma min: 1980.55) e máxima: 147.82 (soma max: 10640.97).
+
+** N = 50
+
+real	0m0.269s
+real	0m0.261s
+real	0m0.267s
+real	0m0.268s
+real	0m0.267s
+
+Distância de Manhattan mínima: 0 (soma min: 23082) e máxima: 281 (soma max: 521340).
+Distância Euclidiana mínima: 0.00 (soma min: 15937.87) e máxima: 162.26 (soma max: 306320.07).
+
+** N = 100
+
+real	0m4.015s
+real	0m4.028s
+real	0m4.032s
+real	0m4.019s
+real	0m4.015s
+
+Distância de Manhattan mínima: 0 (soma min: 56955) e máxima: 286 (soma max: 2136069).
+Distância Euclidiana mínima: 0.00 (soma min: 39586.70) e máxima: 165.21 (soma max: 1252143.85).
+
+** N = 200
+
+real	1m5.701s
+real	1m3.942s
+real	1m9.178s
+real	1m5.515s
+real	1m9.336s
+
+Distância de Manhattan mínima: 0 (soma min: 138707) e máxima: 292 (soma max: 8720374).
+Distância Euclidiana mínima: 0.00 (soma min: 99047.77) e máxima: 168.60 (soma max: 5105523.60).
