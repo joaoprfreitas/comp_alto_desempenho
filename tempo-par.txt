@@ -48,21 +48,70 @@ real	0m1.834s
 Distância de Manhattan mínima: 0 (soma min: 138707) e máxima: 292 (soma max: 8720374).
 Distância Euclidiana mínima: 0.00 (soma min: 99047.77) e máxima: 168.60 (soma max: 5105523.60).
 
-** N = 300 e P = 8 e T 1
-
 ** N = 300 e P = 8 e T 4
+
+mpirun -np 8 --hostfile hosts-hal.txt ./main 300 1 4
+
+real	0m11.566s
+real	0m11.601s
+real	0m11.982s
+real	0m12.129s
+real	0m12.009s
+
+Distância de Manhattan mínima: 0 (soma min: 229711) e máxima: 295 (soma max: 19807530).
+Distância Euclidiana mínima: 0.00 (soma min: 169015.55) e máxima: 170.33 (soma max: 11590592.73).
 
 ** N = 300 e P = 8 e T 6
 
-** N = 300 e P = 16 e T 1
+mpirun -np 8 --hostfile hosts-hal.txt ./main 300 1 6
+
+real	0m11.518s
+real	0m11.652s
+real	0m12.302s
+real	0m11.702s
+real	0m11.741s
+
+Distância de Manhattan mínima: 0 (soma min: 229711) e máxima: 295 (soma max: 19807530).
+Distância Euclidiana mínima: 0.00 (soma min: 169015.55) e máxima: 170.33 (soma max: 11590592.73).
 
 ** N = 300 e P = 16 e T 4
 
+mpirun -np 16 --hostfile hosts-hal.txt ./main 300 1 4
+
+real	0m6.888s
+real	0m6.677s
+real	0m6.737s
+real	0m6.914s
+real	0m6.907s
+
+Distância de Manhattan mínima: 0 (soma min: 229711) e máxima: 295 (soma max: 19807530).
+Distância Euclidiana mínima: 0.00 (soma min: 169015.55) e máxima: 170.33 (soma max: 11590592.73).
+
 ** N = 300 e P = 16 e T 6
 
-** N = 300 e P = 32 e T 1
+mpirun -np 16 --hostfile hosts-hal.txt ./main 300 1 6
+
+real	0m6.824s
+real	0m6.886s
+real	0m6.709s
+real	0m7.137s
+real	0m6.952s
+
+Distância de Manhattan mínima: 0 (soma min: 229711) e máxima: 295 (soma max: 19807530).
+Distância Euclidiana mínima: 0.00 (soma min: 169015.55) e máxima: 170.33 (soma max: 11590592.73).
 
 ** N = 300 e P = 32 e T 4
+
+mpirun -np 32 --hostfile hosts-hal.txt ./main 300 1 4
+
+real	0m4.388s
+real	0m4.500s
+real	0m4.714s
+real	0m4.815s
+real	0m4.823s
+
+Distância de Manhattan mínima: 0 (soma min: 229711) e máxima: 295 (soma max: 19807530).
+Distância Euclidiana mínima: 0.00 (soma min: 169015.55) e máxima: 170.33 (soma max: 11590592.73).
 
 ** N = 300 e P = 32 e T 6
 mpirun -np 32 --hostfile hosts-hal.txt ./main 300 1 6
@@ -76,6 +125,27 @@ real	0m6.135s
 Distância de Manhattan mínima: 0 (soma min: 229711) e máxima: 295 (soma max: 19807530).
 Distância Euclidiana mínima: 0.00 (soma min: 169015.55) e máxima: 170.33 (soma max: 11590592.73).
 
-** N = 400
+** N = 400 e P = 32 e T 6
+mpirun -np 32 --hostfile hosts-hal.txt ./main 400 1 6
+
+real	0m10.937s
+real	0m11.167s
+real	0m11.113s
+real	0m10.927s
+real	0m11.415s
+
+Distância de Manhattan mínima: 0 (soma min: 325153) e máxima: 295 (soma max: 35320516).
+Distância Euclidiana mínima: 0.00 (soma min: 246633.16) e máxima: 170.33 (soma max: 20663988.19).
 
 ** N = 500
+
+mpirun -np 32 --hostfile hosts-hal.txt ./main 500 1 6
+
+real	0m24.161s
+real	0m25.649s
+real	0m25.706s
+real	0m25.571s
+real	0m25.837s
+
+Distância de Manhattan mínima: 0 (soma min: 421364) e máxima: 296 (soma max: 55309653).
+Distância Euclidiana mínima: 0.00 (soma min: 329983.50) e máxima: 170.90 (soma max: 32351967.00).
